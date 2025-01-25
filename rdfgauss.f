@@ -15,7 +15,7 @@ c----- Variable decreation
 
 c-----file read
 c-----HACK:file pathを標準入力、実行時に入力して、書き直しをなくしたい
-      open(13, file='../a-SiO2.xsf', status='old')
+      open(13, file='data/a-SiO2.xsf', status='old')
       read(13, *)
       read(13, *)
       read(13, *) hm(1, 1), hm(2, 1), hm(3, 1)
