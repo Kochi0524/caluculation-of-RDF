@@ -8,7 +8,7 @@ def read_file(filePath):
   return x, y
 
 
-filePath = ["si-si.dat","si-o.dat","o-o.dat"]
+filePath = ["data/si-si.dat","data/si-o.dat","data/o-o.dat"]
 
 plt.figure(figsize=(10,6))
 x_data = []
@@ -19,9 +19,9 @@ for path in filePath:
   x_data.append(x)
   y_data.append(y)
   
-plt.plot(x_data[0],y_data[0],label=f"Si-Si",color="blue")
+plt.plot(x_data[0],y_data[0],label=f"Si-Si",color="red")
 plt.plot(x_data[1],y_data[1],label=f"Si-O",color="green")
-plt.plot(x_data[2],y_data[2],label=f"O-O",color="red")
+plt.plot(x_data[2],y_data[2],label=f"O-O",color="blue")
 
 
 

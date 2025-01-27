@@ -7,7 +7,7 @@ c----- Variable decreation
       real*8 hunit, dd, omega, r_max
       real*8 rho, dx, dy, dz, dis, sigma, gauss, dt, w, nfactor
       real*8 hm(3, 3)
-      real*8, allocatable:: ta(:, :), sa(:, :)
+      real*8, allocatable:: sa(:, :)
       real*8, allocatable :: uco(:,:), co(:,:), rdf(:)
       real*8, allocatable :: ownCo(:,:),pairCo(:,:)
       real*8, parameter ::pi =  3.141592d0  
@@ -25,7 +25,7 @@ c-----HACK:file pathを標準入力、実行時に入力して、書き直しを
       read(13, *) natmo
 
       allocate(sa(3, natmo), zz(natmo),
-     &         ta(3, natmo), elemType(natmo), co(3,natmo))
+     &          elemType(natmo), co(3,natmo))
       do ia =  1, natmo
         read(13, *) zz(ia), sa(1, ia), sa(2, ia), sa(3, ia)
       end do
@@ -104,10 +104,10 @@ c    ia max is natm or natmo ?
           uco(1,ja) = pairCo(1,ia)+hm(1,1)*dble(ix)
      &                            +hm(1,2)*dble(iy)
      &                            +hm(1,3)*dble(iz)
-          uco(2,ja) = pairCo(1,ia)+hm(2,1)*dble(ix)
+          uco(2,ja) = pairCo(2,ia)+hm(2,1)*dble(ix)
      &                            +hm(2,2)*dble(iy)
      &                            +hm(2,3)*dble(iz)
-          uco(3,ja) = pairCo(1,ia)+hm(3,1)*dble(ix)
+          uco(3,ja) = pairCo(3,ia)+hm(3,1)*dble(ix)
      &                            +hm(3,2)*dble(iy)
      &                            +hm(3,3)*dble(iz)
         end do
@@ -120,7 +120,7 @@ c------calc.distance from own atom to pair atom
       omega = hm(1,1)*hm(2,2)*hm(3,3)+hm(1,2)*hm(3,2)*hm(1,3)
      &          +hm(1,3)*hm(2,1)*hm(3,2)-hm(1,1)*hm(2,3)*hm(3,2)
      &          -hm(1,2)*hm(2,1)*hm(3,3)-hm(1,3)*hm(2,2)*hm(3,1)  
-      rho = dble(natmo) / omega
+      rho = dble(elemCounts(own)) / omega
 c     l, sigma, w:temp
       l = 100
       sigma = 0.2d0
@@ -135,7 +135,7 @@ c     l, sigma, w:temp
           dis = sqrt(dx**2 + dy**2 + dz**2)
 
           if (dis.lt.1.0d-8.or.dis.gt.l*1.5d0) cycle
-c-----TODO:規格化因子が正しいか確認
+c-----FIXME:規格化因子を正しく設定
           nfactor = 4.0d0*pi*rho*dble(elemCounts(pair))*(dis)**2
 c         w:mesh width, (l-1)*w = r_max
           do k =  1, l
