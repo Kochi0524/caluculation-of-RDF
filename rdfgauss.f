@@ -2,20 +2,20 @@
       implicit none
 c----- Variable decreation 
       integer natm,natmo, mx, my, mz, l,own,pair
-      integer ia, ja, k, elemIndex, ix, iy, iz, i,ioa,ipa
+      integer ia, ja, k, elemIndex, ix, iy, iz, i, ii
       integer, allocatable::zz(:), elemType(:), elemCounts(:)
+      integer zztemp(10)
       real*8 hunit, dd, omega, r_max
       real*8 rho, dx, dy, dz, dis, sigma, gauss, dt, w, nfactor
       real*8 hm(3, 3)
-      real*8, allocatable:: sa(:, :)
+      real*8, allocatable:: sa(:, :), ucoType(:)
       real*8, allocatable :: uco(:,:), co(:,:), rdf(:)
-      real*8, allocatable :: ownCo(:,:),pairCo(:,:)
       real*8, parameter ::pi =  3.141592d0  
-      character(len=30) filePath
+      character(len=30) inputfile,outputfile, selectFile
 
 c-----file read
-c-----HACK:file pathを標準入力、実行時に入力して、書き直しをなくしたい
-      open(13, file='data/a-SiO2.xsf', status='old')
+      inputfile = selectFile()
+      open(13, file= inputfile, status='old')
       read(13, *)
       read(13, *)
       read(13, *) hm(1, 1), hm(2, 1), hm(3, 1)
@@ -25,22 +25,28 @@ c-----HACK:file pathを標準入力、実行時に入力して、書き直しを
       read(13, *) natmo
 
       allocate(sa(3, natmo), zz(natmo),
-     &          elemType(natmo), co(3,natmo))
+     &         elemType(natmo), co(3,natmo))
       do ia =  1, natmo
         read(13, *) zz(ia), sa(1, ia), sa(2, ia), sa(3, ia)
       end do
       close(13)
 
-
 c-----count. the number of type of atom
       elemType(1) = 1
-
+      zzTemp(:) = 0
+      zzTemp(1) = zz(1)
+      
       do ia =  2, natmo
-        if (zz(ia).eq.zz(ia - 1) ) then  
-          elemType(ia) = elemType(ia - 1)  
-        else if (zz(ia).ne.zz(ia - 1)) then   
-          elemType(ia) = elemType(ia - 1) + 1  
-        end if  
+        do ii =  1, 10
+          if (zz(ia).eq.zzTemp(ii)) then
+            elemType(ia) = ii
+          exit
+          else if (zzTemp(ii).eq.0) then
+            zzTemp(ii) = zz(ia)
+            elemType(ia) = ii
+            exit
+          end if
+        end do
       end do
 
 c-----count. the number of each atoms
@@ -53,63 +59,49 @@ c-----count. the number of each atoms
             elemCounts(elemIndex) = elemCounts(elemIndex) + 1
           end if
         end do
-      end do
+      end
 
-c-----input own atom and pair atom number
+c-----select own atom and pair atom number
       write(6, *) "Input own atom , pair atom"
       write(6, *) "Enter a less than or equal to ", elemType(natmo)
       read(5, *) own, pair
-      allocate(ownCo(3,elemCounts(own)),pairCo(3,(elemCounts(pair))))
 
 
 c-----define co
-      ownCo(:,:) = 0
-      pairCo(:,:) = 0
-      ioa = 0
-      ipa = 0
-
       do ia =  1, natmo
-        if (elemType(ia).eq.own) then
-          ioa = ioa + 1
-          do i =  1, 3
-            ownCo(i, ioa) = sa(i, ia)
-          end do
-        end if
-        if (elemType(ia).eq.pair) then
-          ipa = ipa + 1
-          do i =  1, 3
-            pairCo(i,ipa) = sa(i,ia)
-          end do
-        end if
+        do i =  1, 3
+          co(i, ia) = sa(i, ia)
+        end do
       end do
 
-c-----setting pairs
+c-----setting coordinates of pairs
       r_max = 10.0d0
       mx = aint(r_max / hm(1,1)) + 1
       my = aint(r_max / hm(2,2)) + 1
       mz = aint(r_max / hm(3,3)) + 1
 
-      natm = elemCounts(pair)*((2*mx + 1)*(2*my + 1)*(2*mz + 1))
-      allocate(uco(3,natm))
+      natm = natmo*((2*mx + 1)*(2*my + 1)*(2*mz + 1))
+      allocate(uco(3,natm), ucoType(natm))
 
       uco(:,:) = 0.0d0
+      ucoType(:) = 0
       ja = 0
 
       do ix =  -mx, mx
       do iy =  -my, my
       do iz =  -mz, mz
-c    ia max is natm or natmo ?
-        do ia =  1, elemCounts(pair)
+        do ia =  1, natmo
           ja = ja + 1
-          uco(1,ja) = pairCo(1,ia)+hm(1,1)*dble(ix)
-     &                            +hm(1,2)*dble(iy)
-     &                            +hm(1,3)*dble(iz)
-          uco(2,ja) = pairCo(2,ia)+hm(2,1)*dble(ix)
-     &                            +hm(2,2)*dble(iy)
-     &                            +hm(2,3)*dble(iz)
-          uco(3,ja) = pairCo(3,ia)+hm(3,1)*dble(ix)
-     &                            +hm(3,2)*dble(iy)
-     &                            +hm(3,3)*dble(iz)
+          ucoType(ja) = elemType(ia)
+          uco(1,ja) = co(1, ia)+hm(1,1)*dble(ix)
+     &                         +hm(1,2)*dble(iy)
+     &                         +hm(1,3)*dble(iz)
+          uco(2,ja) = co(2, ia)+hm(2,1)*dble(ix)
+     &                         +hm(2,2)*dble(iy)
+     &                         +hm(2,3)*dble(iz)
+          uco(3,ja) = co(3 ,ia)+hm(3,1)*dble(ix)
+     &                         +hm(3,2)*dble(iy)
+     &                         +hm(3,3)*dble(iz)
         end do
       end do        
       end do
@@ -121,21 +113,22 @@ c------calc.distance from own atom to pair atom
      &          +hm(1,3)*hm(2,1)*hm(3,2)-hm(1,1)*hm(2,3)*hm(3,2)
      &          -hm(1,2)*hm(2,1)*hm(3,3)-hm(1,3)*hm(2,2)*hm(3,1)  
       rho = dble(elemCounts(own)) / omega
-c     l, sigma, w:temp
+
       l = 100
       sigma = 0.2d0
       w = r_max / dble(l)
       allocate(rdf(l))
 
-      do ia =  1, elemCounts(own)
+      do ia =  1, natmo
+        if (elemType(ia).ne.own) cycle
         do ja =  1, natm
-          dx = uco(1,ja) - ownCo(1,ia)
-          dy = uco(2,ja) - ownCo(2,ia)
-          dz = uco(3,ja) - ownCo(3,ia)
+          if (ucoType(ja).ne.pair) cycle
+          dx = uco(1,ja) - co(1,ia)
+          dy = uco(2,ja) - co(2,ia)
+          dz = uco(3,ja) - co(3,ia)
           dis = sqrt(dx**2 + dy**2 + dz**2)
 
           if (dis.lt.1.0d-8.or.dis.gt.l*1.5d0) cycle
-c-----FIXME:規格化因子を正しく設定
           nfactor = 4.0d0*pi*rho*dble(elemCounts(pair))*(dis)**2
 c         w:mesh width, (l-1)*w = r_max
           do k =  1, l
@@ -149,9 +142,7 @@ c         w:mesh width, (l-1)*w = r_max
 
 
 c-----file write
-c-----TODO:元素ペアが選択されたらファイル名をコード内で決めて標準入力部分をなくす
-      write(6, *) "Input filepath to write data"
-      read(*, '(A)') filePath
+      outputfile = selectFile()
       open(11, file=filePath, status='replace')
       do k =  1, l
         write(11, *) w*(k-1), rdf(k)
@@ -159,3 +150,15 @@ c-----TODO:元素ペアが選択されたらファイル名をコード内で決
       close(11)
 
       end program rdfgauss
+
+c-----choose filepath 
+c-----data/ディレクトリに入力ファイルが存在するものとする
+      function selectFile()
+        implicit none
+        character(len=30) filename, selectFile
+        write(*, *) "Input file name"
+        read(*, *) filename
+
+        selectFile = "data/"//filename
+        return 
+      end function selectFile
